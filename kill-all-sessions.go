@@ -7,7 +7,7 @@ import (
 )
 
 func KillAllSessions() error {
-	cmd := exec.Command("zsh", "-c", "tmux kill-session -a")
+	cmd := exec.Command("zsh", "-c", "tmux kill-server")
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr

@@ -62,6 +62,7 @@ func main() {
 		case killAllSessions:
 			if err := KillAllSessions(); err != nil {
 				logrus.Errorf("kill all sessions err: %s", err)
+				break
 			}
 
 			logrus.Info("Killed all sessions")
