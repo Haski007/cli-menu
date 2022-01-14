@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/sirupsen/logrus"
@@ -15,47 +16,68 @@ func (i Item) String() string {
 }
 
 const (
-	FavVideosBot Item = "fav-videos-bot"
+	crmBotTheSequel Item = "crm-bot-the-sequel"
+	favVideosBot    Item = "fav-videos-bot"
 
+	createAllSessions Item = "Create all sessions"
+	killAllSessions   Item = "Kill all sessions"
 
 	Quit Item = "Quit"
 )
 
-func main()  {
+func main() {
 	prompt := promptui.Select{
-		Label:             "Choose bot session",
-		Items:             []string{FavVideosBot.String(), Quit.String()},
-		Size:              0,
-		CursorPos:         0,
-		IsVimMode:         false,
-		HideHelp:          false,
-		HideSelected:      false,
-		Templates:         nil,
-		Keys:              nil,
-		Searcher:          nil,
-		StartInSearchMode: false,
-		Pointer:           nil,
-		Stdin:             nil,
-		Stdout:            nil,
+		Label: "Choose bot session",
+		Items: []string{crmBotTheSequel.String(), favVideosBot.String(), killAllSessions.String(), createAllSessions.String(), Quit.String()},
 	}
 
-	_, result, err := prompt.Run()
+	var exit bool
+	for !exit {
+		_, result, err := prompt.Run()
 
-	if err != nil {
-		logrus.Fatalf("Prompt failed %s\n", err)
-	}
+		if err != nil {
+			logrus.Fatalf("Prompt failed %s\n", err)
+		}
 
-	switch Item(result) {
-	case Quit:
-		os.Exit(0)
-	default:
-		cmd := exec.Command("zsh", "-c", "tmux attach -t " + result)
-		cmd.Stdout = os.Stdout
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
+		switch Item(result) {
+		case createAllSessions:
+			items, ok := prompt.Items.([]string)
+			if !ok {
+				logrus.Fatalf("prompt.Items is strings array")
+			}
 
-		if err := cmd.Run(); err != nil {
-			logrus.Fatalf("[cmd.Run] err: %s", err)
+			// ---> parse only sessions names
+			var sessions []string
+			for _, item := range items {
+				if strings.Contains(item, "-") {
+					sessions = append(sessions, item)
+				}
+			}
+
+			if err := CreateSessions(sessions); err != nil {
+				logrus.Fatalf("create sessions err: %s", err)
+			}
+			exit = false
+
+		case killAllSessions:
+			if err := KillAllSessions(); err != nil {
+				logrus.Errorf("kill all sessions err: %s", err)
+			}
+
+			logrus.Info("Killed all sessions")
+			exit = false
+		case Quit:
+			exit = true
+		default:
+			cmd := exec.Command("zsh", "-c", "tmux attach -t "+result)
+			cmd.Stdout = os.Stdout
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+
+			if err := cmd.Run(); err != nil {
+				logrus.Fatalf("[cmd.Run] err: %s", err)
+			}
+			exit = true
 		}
 	}
 }
